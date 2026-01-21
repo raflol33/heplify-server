@@ -45,6 +45,8 @@ func init() {
 		fmt.Println("Could not find toml config file, use flag defaults.", err)
 	}
 
+	applyDBAddrsEnvFallback()
+
 	config.Setting.AlegIDs = config.GenerateRegexMap(config.Setting.AlegIDs)
 
 	logp.DebugSelectorsStr = &config.Setting.LogDbg
@@ -64,6 +66,33 @@ func init() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+func applyDBAddrsEnvFallback() {
+	config.Setting.DBAddrs = normalizeDBAddrs(config.Setting.DBAddrs)
+	if len(config.Setting.DBAddrs) > 0 {
+		return
+	}
+
+	raw, ok := os.LookupEnv("HEPLIFYSERVER_DBADDRS")
+	if !ok || raw == "" {
+		return
+	}
+
+	config.Setting.DBAddrs = normalizeDBAddrs([]string{raw})
+}
+
+func normalizeDBAddrs(addrs []string) []string {
+	normalized := make([]string, 0, len(addrs))
+	for _, addr := range addrs {
+		for _, part := range strings.Split(addr, ",") {
+			trimmed := strings.TrimSpace(part)
+			if trimmed != "" {
+				normalized = append(normalized, trimmed)
+			}
+		}
+	}
+	return normalized
 }
 
 func tomlExists(f string) bool {
