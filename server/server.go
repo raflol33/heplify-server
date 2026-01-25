@@ -1,6 +1,7 @@
 package input
 
 import (
+	"hash/fnv"
 	"os"
 	"os/signal"
 	"runtime"
@@ -108,6 +109,22 @@ func normalizeDBAddrs(addrs []string) []string {
 		}
 	}
 	return normalized
+}
+
+func (h *HEPInput) pickDBChannel(pkt *decoder.HEP) chan *decoder.HEP {
+	if len(h.dbChs) == 1 {
+		return h.dbChs[0]
+	}
+	if pkt != nil && pkt.ProtoType == 1 && pkt.SIP != nil && pkt.SIP.CallID != "" {
+		return h.dbChs[int(hashString(pkt.SIP.CallID))%len(h.dbChs)]
+	}
+	return h.dbChs[int(atomic.AddUint32(&h.dbIndex, 1))%len(h.dbChs)]
+}
+
+func hashString(value string) uint32 {
+	hasher := fnv.New32a()
+	_, _ = hasher.Write([]byte(value))
+	return hasher.Sum32()
 }
 
 func (h *HEPInput) Run() {
@@ -291,7 +308,7 @@ func (h *HEPInput) worker() {
 			}
 
 			if h.useDB {
-				dbChan := h.dbChs[int(atomic.AddUint32(&h.dbIndex, 1))%len(h.dbChs)]
+				dbChan := h.pickDBChannel(hepPkt)
 				select {
 				case dbChan <- hepPkt:
 				default:
