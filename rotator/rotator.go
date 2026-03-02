@@ -497,7 +497,7 @@ func (r *Rotator) Rotate() {
 	if r.usageProtection {
 		switch r.usageScheme {
 		case "maxusage":
-			_, err = r.createJob.AddFunc("30 04 * * *", func() {
+			_, err = r.createJob.AddFunc("*/30 * * * *", func() {
 				logp.Info("run disk space usage job\n")
 				if err := r.UsageProtection("maxusage"); err != nil {
 					logp.Err("%v", err)
@@ -511,7 +511,7 @@ func (r *Rotator) Rotate() {
 			if err != nil {
 				logp.Err("%v", err)
 			} else {
-				_, err = r.createJob.AddFunc("45 04 * * *", func() {
+				_, err = r.createJob.AddFunc("*/30 * * * *", func() {
 					logp.Info("run disk space usage job\n")
 					if err := r.UsageProtection("percentage"); err != nil {
 						logp.Err("%v", err)
